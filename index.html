@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="es">S
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Imagen aumentada</title>
+
+  <!-- ============================================================
+       ✏️  ZONA PARA EDITAR
+       Cambia solo lo que está entre comillas "..." en esta sección.
+       ============================================================ -->
+  <script>
+    const RECURSO = {
+      // Título que aparece en la pantalla de inicio
+      titulo: "SafeLift AR - Inspección de llanta",
+
+      // Nombre de quien hizo el recurso (o del equipo)
+      autor: "Hector Beckford e Isani Echevers",
+
+      // Instrucción que verá la persona antes de abrir la cámara
+      instruccion: "Apunta la cámara de tu celular al marcador SafeLift AR y espera unos segundos.",
+
+      // Archivo .mind que creaste con el compilador de MindAR (carpeta "marcador")
+      marcador: "marcador/marcador.mind",
+
+      // Modelo 3D que aparecerá sobre la imagen (.glb o .gltf, carpeta "modelo")
+      modelo: "modelo/llanta.glb",
+
+      // Tamaño del modelo. Si se ve gigante, usa un número más pequeño (por ejemplo 0.002).
+      // Si casi no se ve, usa uno más grande (por ejemplo 0.05 o 0.5).
+      tamano: 0.005,
+
+      // ¿El modelo flota suavemente hacia arriba y abajo? true = sí, false = no
+      animar: false,
+
+      // Tarjeta de información que aparece cuando la cámara reconoce la imagen
+      tituloInfo: "PUNTO DE INSPECCIÓN: LLANTA",
+textoInfo: "REVISAR: cortes, grietas, desgaste excesivo y condición general de la llanta.",
+
+      // Color principal (nombres en inglés o códigos como #7c3aed)
+      color: "#7c3aed"
+    };
+  </script>
+  <!-- ============================ FIN DE LA ZONA PARA EDITAR ============================ -->
+
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe-v1.5.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    :root { --color: #7c3aed; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0e0b16; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #fff; }
+
+    #inicio {
+      position: fixed; inset: 0; z-index: 20;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      gap: 14px; padding: 24px 20px; text-align: center;
+      background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--color) 45%, #0e0b16), #0e0b16 70%);
+    }
+    #inicio .etiqueta {
+      font-size: 12px; font-weight: 600; letter-spacing: .05em;
+      background: rgba(255,255,255,.14); padding: 4px 10px; border-radius: 999px;
+    }
+    #inicio h1 { margin: 0; font-size: clamp(26px, 7vw, 38px); line-height: 1.15; max-width: 560px; }
+    #inicio .autor { margin: 0; opacity: .75; }
+    #inicio .instruccion { margin: 6px 0 0; max-width: 440px; line-height: 1.5; opacity: .92; }
+    #inicio button {
+      margin-top: 10px; border: 0; border-radius: 999px; padding: 14px 26px;
+      font: 600 17px system-ui, sans-serif; color: #fff; background: var(--color);
+      box-shadow: 0 8px 24px rgba(0,0,0,.35); cursor: pointer;
+    }
+    #inicio .nota { font-size: 13px; opacity: .65; max-width: 420px; }
+    #inicio .nota a { color: #fff; }
+
+    #info {
+      position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 15;
+      max-width: 520px; margin: 0 auto;
+      background: rgba(18, 14, 28, .88); backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,.15); border-left: 5px solid var(--color);
+      border-radius: 16px; padding: 14px 16px;
+      transform: translateY(140%); transition: transform .35s ease;
+    }
+    #info.visible { transform: translateY(0); }
+    #info h2 { margin: 0 0 4px; font-size: 18px; }
+    #info p { margin: 0; line-height: 1.5; font-size: 15px; }
+
+    .a-enter-vr, .a-enter-ar, .a-orientation-modal { display: none !important; }
+
+    #error {
+      position: fixed; left: 16px; right: 16px; top: 16px; z-index: 30; display: none;
+      background: #7f1d1d; border-radius: 12px; padding: 12px 14px; line-height: 1.45; font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id="inicio">
+    <span class="etiqueta">Realidad aumentada</span>
+    <h1 id="titulo"></h1>
+    <p class="autor" id="autor"></p>
+    <p class="instruccion" id="instruccion"></p>
+    <button id="botonIniciar">📷 Abrir la cámara</button>
+    <p class="nota">¿No tienes la imagen? <a id="enlaceMarcador" href="#" target="_blank">Ábrela aquí</a> en otra pantalla o imprímela.</p>
+  </div>
+
+  <div id="info">
+    <h2 id="tituloInfo"></h2>
+    <p id="textoInfo"></p>
+  </div>
+
+  <div id="error"></div>
+
+  <script>
+    // No necesitas cambiar nada de aquí hacia abajo.
+    document.title = RECURSO.titulo;
+    document.documentElement.style.setProperty("--color", RECURSO.color);
+    document.getElementById("titulo").textContent = RECURSO.titulo;
+    document.getElementById("autor").textContent = "Por " + RECURSO.autor;
+    document.getElementById("instruccion").textContent = RECURSO.instruccion;
+    document.getElementById("tituloInfo").textContent = RECURSO.tituloInfo;
+    document.getElementById("textoInfo").textContent = RECURSO.textoInfo;
+    document.getElementById("enlaceMarcador").href = RECURSO.marcador.replace(/\.mind$/i, ".png");
+
+    function mostrarError(mensaje) {
+      const caja = document.getElementById("error");
+      caja.textContent = "⚠️ " + mensaje;
+      caja.style.display = "block";
+    }
+
+    // Construimos la escena con los datos de la zona para editar
+    const t = RECURSO.tamano;
+    const animacion = RECURSO.animar
+      ? 'animation="property: position; to: 0 0.1 0.1; dur: 1200; easing: easeInOutQuad; loop: true; dir: alternate"'
+      : "";
+
+    document.body.insertAdjacentHTML("beforeend", `
+      <a-scene id="escena"
+        mindar-image="imageTargetSrc: ${RECURSO.marcador}; autoStart: false; uiLoading: no; uiError: no; uiScanning: yes"
+        color-space="sRGB"
+        renderer="colorManagement: true, physicallyCorrectLights"
+        vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false">
+        <a-assets>
+          <a-asset-item id="modelo3d" src="${RECURSO.modelo}"></a-asset-item>
+        </a-assets>
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <a-entity id="objetivo" mindar-image-target="targetIndex: 0">
+          <a-gltf-model src="#modelo3d" rotation="0 0 0" position="0 0 0.1"
+            scale="${t} ${t} ${t}" ${animacion}></a-gltf-model>
+        </a-entity>
+      </a-scene>
+    `);
+
+    const escena = document.getElementById("escena");
+    const objetivo = document.getElementById("objetivo");
+    const info = document.getElementById("info");
+
+    objetivo.addEventListener("targetFound", function () { info.classList.add("visible"); });
+    objetivo.addEventListener("targetLost", function () { info.classList.remove("visible"); });
+
+    escena.addEventListener("arError", function () {
+      mostrarError("No se pudo abrir la cámara. Revisa que la página empiece con https:// y que hayas dado permiso de cámara al navegador.");
+    });
+
+    document.getElementById("botonIniciar").addEventListener("click", function () {
+      const iniciar = function () {
+        document.getElementById("inicio").style.display = "none";
+        escena.systems["mindar-image-system"].start();
+      };
+      if (escena.hasLoaded) iniciar();
+      else escena.addEventListener("loaded", iniciar, { once: true });
+    });
+
+    if (location.protocol === "file:") {
+      mostrarError("Estás abriendo el archivo directo desde tu computadora. La cámara solo funciona cuando la página está publicada (por ejemplo, en GitHub Pages).");
+    }
+  </script>
+</body>
+</html>
